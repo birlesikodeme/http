@@ -78,8 +78,8 @@ func (h *HttpClient) Patch(rawurl string, in, out interface{}) error {
 }
 
 // helper function for making an http DELETE request.
-func (h *HttpClient) Delete(rawurl string) error {
-	return h.do(rawurl, "DELETE", nil, nil)
+func (h *HttpClient) Delete(rawurl string, in, out interface{}) error {
+	return h.do(rawurl, "DELETE", in, out)
 }
 
 // helper function to make an http request
