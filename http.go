@@ -30,14 +30,21 @@ type HttpClient struct {
 }
 
 func buildClient(base string) *http.Client {
+	transport := &http.Transport{
+		Dial: (&net.Dialer{
+			Timeout:   30 * time.Second,
+			KeepAlive: 30 * time.Second,
+		}).Dial,
+		TLSHandshakeTimeout:   10 * time.Second,
+		ResponseHeaderTimeout: 10 * time.Second,
+		ExpectContinueTimeout: 1 * time.Second,
+	}
 	if strings.HasPrefix(base, "https") {
 		// Set up our own certificate pool
 		tlsConfig := &tls.Config{RootCAs: x509.NewCertPool(), InsecureSkipVerify: true}
-		transport := &http.Transport{TLSClientConfig: tlsConfig}
-		return &http.Client{Transport: transport}
-	} else {
-		return new(http.Client)
+		transport.TLSClientConfig = tlsConfig
 	}
+	return &http.Client{Transport: transport}
 }
 
 func NewHttpClient(base string) *HttpClient {
