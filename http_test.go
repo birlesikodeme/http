@@ -27,6 +27,16 @@ func Test_debug_http_postman(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func Test_debug_unreachable_host(t *testing.T) {
+	client := NewHttpClient("https://postman-echo.com/post", WithDebug())
+	in := &PostIn{
+		DummyField: "a123456",
+	}
+	out := &PostIn{}
+	err := client.Post("http://192.168.1.189", in, out)
+	require.Error(t, err)
+}
+
 func Test_debug_http_postman_without_debug(t *testing.T) {
 	client := NewHttpClient("https://postman-echo.com/post")
 	in := &PostIn{
