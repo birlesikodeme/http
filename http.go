@@ -108,6 +108,11 @@ func (h *HttpClient) Delete(rawurl string, in, out interface{}) error {
 func (h *HttpClient) do(rawurl, method string, in, out interface{}) error {
 	resp, err := h.open(rawurl, method, in, out)
 	if err != nil {
+		if resp != nil {
+			fmt.Printf("Response error status %s from %s at %s, error: %+v\n", resp.Status, resp.Request.URL, time.Now().Format(time.RFC3339), err)
+		} else {
+			fmt.Printf("Response error at %s, error: %+v\n", time.Now().Format(time.RFC3339), err)
+		}
 		return &HttpError{Status: 503}
 	}
 	defer resp.Body.Close()
