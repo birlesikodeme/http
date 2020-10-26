@@ -17,6 +17,15 @@ type PostIn struct {
 	DummyField string
 }
 
+func Test_http_echo(t *testing.T) {
+	client := NewHttpClient("", WithDebug())
+	in := &PostIn{
+		DummyField: "a123456",
+	}
+	out := &PostIn{}
+	err := client.Post("http://127.0.0.1:3000/notif", in, out)
+	require.NoError(t, err)
+}
 func Test_debug_http_postman(t *testing.T) {
 	client := NewHttpClient("https://postman-echo.com/post", WithDebug())
 	in := &PostIn{

@@ -127,13 +127,23 @@ func (h *HttpClient) do(rawurl, method string, in, out interface{}) error {
 		return httpError
 	}
 
-	jsonOut := []byte("")
 	if out != nil {
-		jsonOut, _ = json.MarshalIndent(out, "", " ")
-		if h.debug {
-			fmt.Printf("Response status %s from %s at %s, data: %s\n", resp.Status, resp.Request.URL, time.Now().Format(time.RFC3339), jsonOut)
+		reader := resp.Body
+		rawData, err := ioutil.ReadAll(reader)
+		if err != nil {
+			fmt.Printf("Response body reader: %+v", err)
+			return err
 		}
-		return json.NewDecoder(resp.Body).Decode(out)
+		rawDataStr := string(rawData)
+		if h.debug {
+			fmt.Printf("Response status %s from %s at %s, data: %s\n", resp.Status, resp.Request.URL, time.Now().Format(time.RFC3339), rawDataStr)
+		}
+		err = json.NewDecoder(bytes.NewReader(rawData)).Decode(out)
+		if err != nil {
+			if h.debug {
+				fmt.Printf("Response json decoding error data: %s err: %+v\n", rawDataStr, err)
+			}
+		}
 	} else {
 		if h.debug {
 			fmt.Printf("Response status %s from %s at %s\n", resp.Status, resp.Request.URL, time.Now().Format(time.RFC3339))
