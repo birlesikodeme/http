@@ -11,14 +11,14 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"fmt"
-	"net"
-	"time"
 	"io"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type HttpClient struct {
@@ -29,7 +29,10 @@ type HttpClient struct {
 		Username string
 		Password string
 	}
+	debug bool
 }
+
+type HttpClientOption func(*HttpClient)
 
 func buildClient(base string) *http.Client {
 	transport := &http.Transport{
@@ -49,8 +52,18 @@ func buildClient(base string) *http.Client {
 	return &http.Client{Transport: transport}
 }
 
-func NewHttpClient(base string) *HttpClient {
-	return &HttpClient{client: buildClient(base), Base: base}
+func NewHttpClient(base string, opts ...HttpClientOption) *HttpClient {
+	h := &HttpClient{client: buildClient(base), Base: base, debug: false}
+	for _, opt := range opts {
+		opt(h)
+	}
+	return h
+}
+
+func WithDebug() HttpClientOption {
+	return func(h *HttpClient) {
+		h.debug = true
+	}
 }
 
 func (h *HttpClient) SetBearerToken(token string) {
@@ -102,11 +115,24 @@ func (h *HttpClient) do(rawurl, method string, in, out interface{}) error {
 	if resp.StatusCode != 200 {
 		httpError := &HttpError{Status: resp.StatusCode}
 		json.NewDecoder(resp.Body).Decode(httpError)
+		if h.debug {
+			jsonErr, _ := json.MarshalIndent(httpError, "", " ")
+			fmt.Printf("Response http error status %s from %s at %s, httpError: %s\n", resp.Status, resp.Request.URL, time.Now().Format(time.RFC3339), jsonErr)
+		}
 		return httpError
 	}
 
+	jsonOut := []byte("")
 	if out != nil {
+		jsonOut, _ = json.MarshalIndent(out, "", " ")
+		if h.debug {
+			fmt.Printf("Response status %s from %s at %s, data: %s\n", resp.Status, resp.Request.URL, time.Now().Format(time.RFC3339), jsonOut)
+		}
 		return json.NewDecoder(resp.Body).Decode(out)
+	} else {
+		if h.debug {
+			fmt.Printf("Response status %s from %s at %s\n", resp.Status, resp.Request.URL, time.Now().Format(time.RFC3339))
+		}
 	}
 
 	return nil
@@ -136,6 +162,7 @@ func (h *HttpClient) open(rawurl, method string, in, out interface{}) (*http.Res
 	// if we are posting or putting data, we need to
 	// write it to the body of the request.
 	if in != nil {
+
 		rc, ok := in.(io.ReadCloser)
 		if ok {
 			req.Body = rc
@@ -146,12 +173,19 @@ func (h *HttpClient) open(rawurl, method string, in, out interface{}) (*http.Res
 				return nil, err
 			}
 
+			if h.debug {
+				fmt.Printf("Request %s to %s at %s, data: %s\n", method, uri.String(), time.Now().Format(time.RFC3339), inJson)
+			}
 			buf := bytes.NewBuffer(inJson)
 			req.Body = ioutil.NopCloser(buf)
 
 			req.ContentLength = int64(len(inJson))
 			req.Header.Set("Content-Length", strconv.Itoa(len(inJson)))
 			req.Header.Set("Content-Type", "application/json")
+		}
+	} else {
+		if h.debug {
+			fmt.Printf("Request %s to %s at %s\n", method, uri.String(), time.Now().Format(time.RFC3339))
 		}
 	}
 
