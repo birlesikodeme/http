@@ -113,7 +113,7 @@ func (h *HttpClient) do(rawurl, method string, in, out interface{}) error {
 		} else {
 			fmt.Printf("Response error at %s, error: %+v\n", time.Now().Format(time.RFC3339), err)
 		}
-		return &HttpError{Status: 503}
+		return fmt.Errorf("request failed: %w", err)
 	}
 	defer resp.Body.Close()
 
